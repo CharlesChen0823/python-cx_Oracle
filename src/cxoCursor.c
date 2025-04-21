@@ -1484,18 +1484,32 @@ static PyObject *cxoCursor_multiFetch(cxoCursor *cursor, int rowLimit)
     int found, rowNum;
 
     // verify fetch can be performed
-    if (cxoCursor_verifyFetch(cursor) < 0)
+    if (cxoCursor_verifyFetch(cursor) < 0) {
+        // HotFix, should manully decrease ref for rowFactory
+        if (cursor->rowFactory && cursor->rowFactory != Py_None) {
+            Py_CLEAR(cursor->rowFactory);
+        }
         return NULL;
+    }
 
     // create an empty list
     results = PyList_New(0);
-    if (!results)
+    if (!results) {
+        // HotFix, should manully decrease ref for rowFactory
+        if (cursor->rowFactory && cursor->rowFactory != Py_None) {
+            Py_CLEAR(cursor->rowFactory);
+        }
         return NULL;
+    }
 
     // fetch as many rows as possible
     for (rowNum = 0; rowLimit == 0 || rowNum < rowLimit; rowNum++) {
         if (cxoCursor_fetchRow(cursor, &found, &bufferRowIndex) < 0) {
             Py_DECREF(results);
+            // HotFix, should manully decrease ref for rowFactory
+            if (cursor->rowFactory && cursor->rowFactory != Py_None) {
+                Py_CLEAR(cursor->rowFactory);
+            }
             return NULL;
         }
         if (!found)
@@ -1503,16 +1517,28 @@ static PyObject *cxoCursor_multiFetch(cxoCursor *cursor, int rowLimit)
         row = cxoCursor_createRow(cursor, bufferRowIndex);
         if (!row) {
             Py_DECREF(results);
+            // HotFix, should manully decrease ref for rowFactory
+            if (cursor->rowFactory && cursor->rowFactory != Py_None) {
+                Py_CLEAR(cursor->rowFactory);
+            }
             return NULL;
         }
         if (PyList_Append(results, row) < 0) {
             Py_DECREF(row);
             Py_DECREF(results);
+            // HotFix, should manully decrease ref for rowFactory
+            if (cursor->rowFactory && cursor->rowFactory != Py_None) {
+                Py_CLEAR(cursor->rowFactory);
+            }
             return NULL;
         }
         Py_DECREF(row);
     }
 
+    // HotFix, should manully decrease ref for rowFactory
+    if (cursor->rowFactory && cursor->rowFactory != Py_None) {
+        Py_CLEAR(cursor->rowFactory);
+    }
     return results;
 }
 
@@ -1525,14 +1551,35 @@ static PyObject *cxoCursor_fetchOne(cxoCursor *cursor, PyObject *args)
 {
     uint32_t bufferRowIndex = 0;
     int found = 0;
+    PyObject *row;
 
-    if (cxoCursor_verifyFetch(cursor) < 0)
+    if (cxoCursor_verifyFetch(cursor) < 0) {
+        // HotFix, should manully decrease ref for rowFactory
+        if (cursor->rowFactory && cursor->rowFactory != Py_None) {
+            Py_CLEAR(cursor->rowFactory);
+        }
         return NULL;
-    if (cxoCursor_fetchRow(cursor, &found, &bufferRowIndex) < 0)
+    }
+    if (cxoCursor_fetchRow(cursor, &found, &bufferRowIndex) < 0) {
+        // HotFix, should manully decrease ref for rowFactory
+        if (cursor->rowFactory && cursor->rowFactory != Py_None) {
+            Py_CLEAR(cursor->rowFactory);
+        }
         return NULL;
-    if (found)
-        return cxoCursor_createRow(cursor, bufferRowIndex);
+    }
+    if (found) {
+        row = cxoCursor_createRow(cursor, bufferRowIndex);
+        // HotFix, should manully decrease ref for rowFactory
+        if (cursor->rowFactory && cursor->rowFactory != Py_None) {
+            Py_CLEAR(cursor->rowFactory);
+        }
+        return row;
+    }
 
+    // HotFix, should manully decrease ref for rowFactory
+    if (cursor->rowFactory && cursor->rowFactory != Py_None) {
+        Py_CLEAR(cursor->rowFactory);
+    }
     Py_RETURN_NONE;
 }
 
