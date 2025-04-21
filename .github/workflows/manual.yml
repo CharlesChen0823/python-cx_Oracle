@@ -32,6 +32,9 @@ jobs:
       - name: Checkout repos
         uses: actions/checkout@v4
 
+      - name: Checkout submodule
+        run: git submodule update --init --recursive
+
       - name: Build sdist
         run: python3 setup.py bdist_wheel
         env:
